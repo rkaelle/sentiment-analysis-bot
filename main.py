@@ -12,6 +12,8 @@ import plotly.graph_objs as go
 import plotly.io as pio
 from dotenv import load_dotenv
 import os
+import firebase_admin
+from firebase_admin import credentials, storage
 
 
 load_dotenv()
@@ -22,6 +24,12 @@ nltk.download('vader_lexicon')
 
 df = pd.read_csv('Stocks.csv')
 stock_data = df.head(1000)['Symbol'].tolist()
+
+# initialize Firebase
+cred = credentials.Certificate('/Users/ryankaelle/Desktop/ryansdailynews/secrets/firebaseCredentials.json')
+firebase_admin.initialize_app(cred, {
+    'storageBucket': 'ryansdailynews-7df9d.appspot.com'
+})
 
 def data_procurement():
     global stock_data
@@ -160,6 +168,14 @@ def save_sentiment_results(results, filepath):
         json.dump(results, file, indent=4)
     print(f"Sentiment analysis results saved to {filepath}")
 
+def upload_image_to_firebase(file_path, destination_blob_name):
+    bucket = storage.bucket()
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_filename(file_path)
+    blob.make_public() 
+    print(f"Uploaded {file_path} to {destination_blob_name}, accessible at {blob.public_url}")
+    return blob.public_url
+
 def visualize(filepath):
     with open(filepath, 'r') as file:
         stock_sentiments = json.load(file)
@@ -175,10 +191,10 @@ def visualize(filepath):
         steps = []
         num_steps = 200
         for i in range(num_steps):
-            step_value = -1 + i * (2 / num_steps)  # -1 to 1 range
+            step_value = -1 + i * (2 / num_steps) 
             if step_value > avg_sentiment:
-                break  # Stop the gradient at the needle's position
-            color_value = i / num_steps  # 0 to 1 for color interpolation
+                break  
+            color_value = i / num_steps  
             if color_value < 0.5:
                 r = 255
                 g = int(255 * (color_value * 2))
@@ -195,8 +211,8 @@ def visualize(filepath):
         fig.add_trace(go.Indicator(
             mode="gauge+number",
             value=avg_sentiment,
-            title={'text': f"{symbol}", 'font': {'size': 24, 'color': 'black'}},  # Set title text color to black
-            number={'valueformat': '.1%', 'font': {'size': 24, 'color': 'black'}},  # Set number text color to black
+            title={'text': f"{symbol}", 'font': {'size': 24, 'color': 'black'}},  
+            number={'valueformat': '.1%', 'font': {'size': 24, 'color': 'black'}}, 
             gauge={
                 'axis': {'range': [-1, 1], 'tickwidth': 1, 'tickcolor': "darkblue"},
                 'bar': {'color': needle_color, 'thickness': 0},
@@ -218,14 +234,18 @@ def visualize(filepath):
             paper_bgcolor='rgba(0,0,0,0)',  
             plot_bgcolor='rgba(0,0,0,0)',  
             annotations=[],
-            font=dict(size=18, color='black')  # Set default text color to black
+            font=dict(size=18, color='black')  
         )
 
-        filename = f"gauges/stock_sentiment_gauge_{index}.png"
-        fig.write_image(filename, width=600, height=600)
-        print(f"Saved {filename}")
-        index += 1
+        local_filename = f"gauges/stock_sentiment_gauge_{index}.png"
+        fig.write_image(local_filename, width=600, height=600)
+        print(f"Saved {local_filename}")
+        
+        # Upload to Firebase Storage using the local file path
+        destination_blob_name = f'gauges/stock_sentiment_gauge_{index}.png'
+        public_url = upload_image_to_firebase(local_filename, destination_blob_name)
 
+        index += 1
 
 
 def main():
