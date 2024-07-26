@@ -195,8 +195,8 @@ def visualize(filepath):
         fig.add_trace(go.Indicator(
             mode="gauge+number",
             value=avg_sentiment,
-            title={'text': f"{symbol}", 'font': {'size': 24}},  
-            number={'valueformat': '.1%', 'font': {'size': 24}},  
+            title={'text': f"{symbol}", 'font': {'size': 24, 'color': 'black'}},  # Set title text color to black
+            number={'valueformat': '.1%', 'font': {'size': 24, 'color': 'black'}},  # Set number text color to black
             gauge={
                 'axis': {'range': [-1, 1], 'tickwidth': 1, 'tickcolor': "darkblue"},
                 'bar': {'color': needle_color, 'thickness': 0},
@@ -218,9 +218,8 @@ def visualize(filepath):
             paper_bgcolor='rgba(0,0,0,0)',  
             plot_bgcolor='rgba(0,0,0,0)',  
             annotations=[],
-            font=dict(size=18) 
+            font=dict(size=18, color='black')  # Set default text color to black
         )
-        
 
         filename = f"gauges/stock_sentiment_gauge_{index}.png"
         fig.write_image(filename, width=600, height=600)
@@ -232,7 +231,7 @@ def visualize(filepath):
 def main():
     crypto = False
 
-    data_procurement()
+    #data_procurement()
     if crypto:
         data_type = 'crypto'
     else:
@@ -252,12 +251,12 @@ def main():
     password=password
     )
     
-    reddit_data(login, data_type)
-    data = load_reddit_data('reddit_data.json')
-    sentiment_results = process_reddit_data(data)
-    save_sentiment_results(sentiment_results, 'sentiment_results.json')
-    stock_sentiments = stock_analysis(sentiment_results)
-    save_sentiment_results(stock_sentiments, 'stock_sentiment_results.json')
+    #reddit_data(login, data_type)
+    #data = load_reddit_data('reddit_data.json')
+    #sentiment_results = process_reddit_data(data)
+    #save_sentiment_results(sentiment_results, 'sentiment_results.json')
+    #stock_sentiments = stock_analysis(sentiment_results)
+    #save_sentiment_results(stock_sentiments, 'stock_sentiment_results.json')
     visualize("stock_sentiment_results.json")
 
 
