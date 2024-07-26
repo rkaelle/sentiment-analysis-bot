@@ -37,23 +37,33 @@ def data_procurement():
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0",
     }
 
-    url = "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=5000&exchange=nasdaq"
-    r = requests.get(url, headers=headers)
-    j = r.json()
+    # NYSE and NASDAQ
+    urls = {
+        'nyse': "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=5000&exchange=nyse",
+        'nasdaq': "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=5000&exchange=nasdaq"
+    }
 
-    table = j['data']['table']
-    table_headers = table['headers']
+    combined_data = []
+
+    for exchange, url in urls.items():
+        r = requests.get(url, headers=headers)
+        j = r.json()
+
+        table = j['data']['table']
+        table_headers = table['headers']
+
+        for table_row in table['rows']:
+            csv_row = {table_headers.get(key, None): value for key, value in table_row.items()}
+            combined_data.append(csv_row)
 
     with open('Stocks.csv', 'w', newline='') as f_output:
         csv_output = csv.DictWriter(f_output, fieldnames=table_headers.values(), extrasaction='ignore')
         csv_output.writeheader()
-
-        for table_row in table['rows']:
-            csv_row = {table_headers.get(key, None): value for key, value in table_row.items()}
-            csv_output.writerow(csv_row)
+        csv_output.writerows(combined_data)
 
     df = pd.read_csv('Stocks.csv')
-    stock_data = df.head(1000)['Symbol'].tolist()
+    stock_data = df['Symbol'].tolist()
+
 
 def load_reddit_data(filepath):
     with open(filepath, 'r') as file:
@@ -251,7 +261,7 @@ def visualize(filepath):
 def main():
     crypto = False
 
-    #data_procurement()
+    data_procurement()
     if crypto:
         data_type = 'crypto'
     else:
@@ -277,7 +287,7 @@ def main():
     #save_sentiment_results(sentiment_results, 'sentiment_results.json')
     #stock_sentiments = stock_analysis(sentiment_results)
     #save_sentiment_results(stock_sentiments, 'stock_sentiment_results.json')
-    visualize("stock_sentiment_results.json")
+    #visualize("stock_sentiment_results.json")
 
 
 if __name__ == '__main__':
