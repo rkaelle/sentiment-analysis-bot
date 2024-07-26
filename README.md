@@ -34,7 +34,8 @@ cd stock-sentiment-analysis
 ```
 **2. Install Dependencies**
 ```
-pip install requests pandas praw nltk matplotlib numpy plotly
+pip install requests pandas praw nltk matplotlib numpy plotly python-dotenv
+pip install -U kaleido
 ```
 **3. Download NLTK Data**
 ```
