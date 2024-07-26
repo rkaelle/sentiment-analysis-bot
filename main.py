@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 import os
 import firebase_admin
 from firebase_admin import credentials, storage
+from tqdm import tqdm
 
 
 load_dotenv()
@@ -37,7 +38,7 @@ def data_procurement():
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0",
     }
 
-    # NYSE and NASDAQ
+    # URLs for NYSE and NASDAQ
     urls = {
         'nyse': "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=5000&exchange=nyse",
         'nasdaq': "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=5000&exchange=nasdaq"
@@ -51,16 +52,20 @@ def data_procurement():
 
         table = j['data']['table']
         table_headers = table['headers']
+        rows = table['rows']
 
-        for table_row in table['rows']:
+        # Use tqdm to display progress bar
+        for table_row in tqdm(rows, desc=f"Fetching data for {exchange.upper()}"):
             csv_row = {table_headers.get(key, None): value for key, value in table_row.items()}
             combined_data.append(csv_row)
 
+    # Write the combined data to the CSV file
     with open('Stocks.csv', 'w', newline='') as f_output:
         csv_output = csv.DictWriter(f_output, fieldnames=table_headers.values(), extrasaction='ignore')
         csv_output.writeheader()
         csv_output.writerows(combined_data)
 
+    # Update stock_data with symbols from the combined data
     df = pd.read_csv('Stocks.csv')
     stock_data = df['Symbol'].tolist()
 
@@ -261,7 +266,7 @@ def visualize(filepath):
 def main():
     crypto = False
 
-    data_procurement()
+    #data_procurement()
     if crypto:
         data_type = 'crypto'
     else:
@@ -287,7 +292,7 @@ def main():
     #save_sentiment_results(sentiment_results, 'sentiment_results.json')
     #stock_sentiments = stock_analysis(sentiment_results)
     #save_sentiment_results(stock_sentiments, 'stock_sentiment_results.json')
-    #visualize("stock_sentiment_results.json")
+    visualize("stock_sentiment_results.json")
 
 
 if __name__ == '__main__':
