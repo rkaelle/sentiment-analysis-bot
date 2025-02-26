@@ -42,33 +42,23 @@ def data_procurement():
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0",
     }
-    # URL for NASDAQ data
+
+    # URLs for NYSE and NASDAQ
     urls = {
         'nasdaq': "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=5000&exchange=nasdaq"
     }
+
     combined_data = []
 
-    # Set up a session with retries
-    session = requests.Session()
-    adapter = requests.adapters.HTTPAdapter(max_retries=3)
-    session.mount('http://', adapter)
-    session.mount('https://', adapter)
-
     for exchange, url in urls.items():
-        try:
-            # Adding a timeout (in seconds) so the request doesn't hang indefinitely
-            r = session.get(url, headers=headers, timeout=10)
-            r.raise_for_status()  # Raise an exception for HTTP errors
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching data for {exchange.upper()}: {e}")
-            continue
-
+        r = requests.get(url, headers=headers)
         j = r.json()
+
         table = j['data']['table']
         table_headers = table['headers']
         rows = table['rows']
 
-        # Use tqdm to display a progress bar for each exchange
+        # Use tqdm to display progress bar
         for table_row in tqdm(rows, desc=f"Fetching data for {exchange.upper()}"):
             csv_row = {table_headers.get(key, None): value for key, value in table_row.items()}
             combined_data.append(csv_row)
@@ -82,6 +72,7 @@ def data_procurement():
     # Update stock_data with symbols from the combined data
     df = pd.read_csv('Stocks.csv')
     stock_data = df['Symbol'].tolist()
+
 
 def load_reddit_data(filepath):
     with open(filepath, 'r') as file:
@@ -299,12 +290,12 @@ def main():
     password=password
     )
     
-    #reddit_data(login, data_type)
-    #data = load_reddit_data('reddit_data.json')
-    #sentiment_results = process_reddit_data(data)
-    #save_sentiment_results(sentiment_results, 'sentiment_results.json')
-    #stock_sentiments = stock_analysis(sentiment_results)
-    #save_sentiment_results(stock_sentiments, 'stock_sentiment_results.json')
+    reddit_data(login, data_type)
+    data = load_reddit_data('reddit_data.json')
+    sentiment_results = process_reddit_data(data)
+    save_sentiment_results(sentiment_results, 'sentiment_results.json')
+    stock_sentiments = stock_analysis(sentiment_results)
+    save_sentiment_results(stock_sentiments, 'stock_sentiment_results.json')
     visualize("stock_sentiment_results.json")
 
 
