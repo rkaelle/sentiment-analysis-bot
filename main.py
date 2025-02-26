@@ -15,7 +15,9 @@ import os
 import firebase_admin
 from firebase_admin import credentials, storage
 from tqdm import tqdm
+import certifi
 
+os.environ['SSL_CERT_FILE'] = certifi.where()
 
 load_dotenv()
 
@@ -40,7 +42,6 @@ def data_procurement():
 
     # URLs for NYSE and NASDAQ
     urls = {
-        'nyse': "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=5000&exchange=nyse",
         'nasdaq': "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=5000&exchange=nasdaq"
     }
 
@@ -157,7 +158,7 @@ def stock_analysis(data):
         print(f"Analyzing stocks in subreddit: {subreddit}")
         for post in posts:
             for symbol in stock_data:
-                if re.search(r'\b' + re.escape(symbol) + r'\b', post['title']):
+                if re.search(r'\b' + re.escape(str(symbol)) + r'\b', post['title']):
                     sentiment = post['sentiment']
                     if symbol not in stock_sentiments:
                         stock_sentiments[symbol] = {'compound': 0, 'count': 0}
@@ -166,7 +167,7 @@ def stock_analysis(data):
 
             for comment in post['comments']:
                 for symbol in stock_data:
-                    if re.search(r'\b' + re.escape(symbol) + r'\b', comment['body']):
+                    if re.search(r'\b' + re.escape(str(symbol)) + r'\b', post['title']):
                         sentiment = comment['sentiment']
                         if symbol not in stock_sentiments:
                             stock_sentiments[symbol] = {'compound': 0, 'count': 0}
@@ -196,20 +197,22 @@ def visualize(filepath):
         stock_sentiments = json.load(file)
     
     top_stocks = sorted(stock_sentiments.items(), key=lambda x: x[1]['count'], reverse=True)[:8]
-    index = 1
-    for index, stock in enumerate(top_stocks):
+    
+    for index, stock in enumerate(top_stocks, start=0):
         symbol = stock[0]
-        avg_sentiment = stock[1]['average_sentiment']
+        avg_sentiment = stock[1]['average_sentiment']  # expected to be between 0 and 1 now
         
         fig = go.Figure()
 
+        # Build gradient steps from 0 to avg_sentiment
         steps = []
         num_steps = 200
         for i in range(num_steps):
-            step_value = -1 + i * (2 / num_steps) 
+            step_value = i * (1 / num_steps)  # goes from 0 to 1 in increments of 1/num_steps
             if step_value > avg_sentiment:
                 break  
-            color_value = i / num_steps  
+            # Use color_value based on the step position
+            color_value = i / num_steps
             if color_value < 0.5:
                 r = 255
                 g = int(255 * (color_value * 2))
@@ -219,9 +222,10 @@ def visualize(filepath):
                 g = 255
                 b = 0
             color = f'rgb({r}, {g}, {b})'
-            steps.append({'range': [step_value, step_value + 2 / num_steps], 'color': color})
+            steps.append({'range': [step_value, step_value + (1 / num_steps)], 'color': color})
         
-        needle_color = 'red' if avg_sentiment < 0 else ('yellow' if avg_sentiment == 0 else 'green')
+        # Since all sentiments are >= 0, use yellow for 0 and green otherwise
+        needle_color = 'yellow' if avg_sentiment == 0 else 'green'
 
         fig.add_trace(go.Indicator(
             mode="gauge+number",
@@ -229,7 +233,7 @@ def visualize(filepath):
             title={'text': f"{symbol}", 'font': {'size': 24, 'color': 'black'}},  
             number={'valueformat': '.1%', 'font': {'size': 24, 'color': 'black'}}, 
             gauge={
-                'axis': {'range': [-1, 1], 'tickwidth': 1, 'tickcolor': "darkblue"},
+                'axis': {'range': [0, 1], 'tickwidth': 1, 'tickcolor': "darkblue"},
                 'bar': {'color': needle_color, 'thickness': 0},
                 'bgcolor': "white",
                 'borderwidth': 2,
@@ -260,13 +264,10 @@ def visualize(filepath):
         destination_blob_name = f'gauges/stock_sentiment_gauge_{index}.png'
         public_url = upload_image_to_firebase(local_filename, destination_blob_name)
 
-        index += 1
-
-
 def main():
     crypto = False
 
-    #data_procurement()
+    data_procurement()
     if crypto:
         data_type = 'crypto'
     else:
