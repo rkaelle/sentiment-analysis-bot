@@ -30,6 +30,10 @@ stock_data = df.head(1000)['Symbol'].tolist()
 
 # initialize Firebase
 cred = credentials.Certificate('/Users/ryankaelle/Desktop/ryansdailynews/secrets/firebaseCredentials.json')
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'ryansdailynews'))
+FIREBASE_CRED_PATH = os.path.join(BASE_DIR, "firebaseCredentials.json")
+cred = credentials.Certificate(FIREBASE_CRED_PATH)
 firebase_admin.initialize_app(cred, {
     'storageBucket': 'ryansdailynews-7df9d.appspot.com'
 })
