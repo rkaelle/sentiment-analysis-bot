@@ -16,6 +16,7 @@ import firebase_admin
 from firebase_admin import credentials, storage
 from tqdm import tqdm
 import certifi
+import prawcore
 
 os.environ['SSL_CERT_FILE'] = certifi.where()
 
@@ -25,8 +26,8 @@ load_dotenv()
 nltk.download('vader_lexicon')
 
 
-#df = pd.read_csv('Stocks.csv')
-#stock_data = df.head(1000)['Symbol'].tolist()
+df = pd.read_csv('Stocks.csv')
+stock_data = df.head(1000)['Symbol'].tolist()
 
 # initialize Firebase
 
@@ -91,30 +92,33 @@ def reddit_data(info, data_type):
         print(f"Processing subreddit: {sub}")
         subreddit_data = []
 
-        for submission in info.subreddit(sub).hot(limit=post_limit):
-            if submission.upvote_ratio >= 0.65 and submission.ups >= 20:
-                post_data = {
-                    'title': submission.title,
-                    'id': submission.id,
-                    'author': str(submission.author),
-                    'created_utc': submission.created_utc,
-                    'score': submission.score,
-                    'upvote_ratio': submission.upvote_ratio,
-                    'url': submission.url,
-                    'comments': []
-                }
-                submission.comments.replace_more(limit=0)
-                for comment in submission.comments.list():
-                    if comment.score >= 3:
-                        comment_data = {
-                            'author': str(comment.author),
-                            'score': comment.score,
-                            'body': comment.body,
-                            'created_utc': comment.created_utc
-                        }
-                        post_data['comments'].append(comment_data)
-                subreddit_data.append(post_data)
-        
+        try: 
+            for submission in info.subreddit(sub).hot(limit=post_limit):
+                if submission.upvote_ratio >= 0.65 and submission.ups >= 20:
+                    post_data = {
+                        'title': submission.title,
+                        'id': submission.id,
+                        'author': str(submission.author),
+                        'created_utc': submission.created_utc,
+                        'score': submission.score,
+                        'upvote_ratio': submission.upvote_ratio,
+                        'url': submission.url,
+                        'comments': []
+                    }
+                    submission.comments.replace_more(limit=0)
+                    for comment in submission.comments.list():
+                        if comment.score >= 3:
+                            comment_data = {
+                                'author': str(comment.author),
+                                'score': comment.score,
+                                'body': comment.body,
+                                'created_utc': comment.created_utc
+                            }
+                            post_data['comments'].append(comment_data)
+                    subreddit_data.append(post_data)
+        except prawcore.exceptions.Forbidden:
+                print(f"Skipping subreddit '{sub}' due to forbidden error.")
+                continue
         all_data[sub] = subreddit_data
 
     with open('reddit_data.json', 'w') as json_file:
