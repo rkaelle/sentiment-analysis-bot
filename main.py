@@ -25,8 +25,8 @@ load_dotenv()
 nltk.download('vader_lexicon')
 
 
-df = pd.read_csv('Stocks.csv')
-stock_data = df.head(1000)['Symbol'].tolist()
+#df = pd.read_csv('Stocks.csv')
+#stock_data = df.head(1000)['Symbol'].tolist()
 
 # initialize Firebase
 
